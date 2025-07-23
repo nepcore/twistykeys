@@ -38,7 +38,7 @@ For the rest of this document, all values are given in their **decrypted form** 
 All messages (both app->cube and cube->app) start with the byte `0xfe`. The next byte is the length of the message (excluding padding).
 
 Additionally, for all cube->app messages:
-- The byte after the length is an "opcode" that specifies type type of message.
+- The byte after the length is an "opcode" that specifies the type of message.
 - After the opcode is a 4 byte big-endian timestamp. **The timestamp is in units of 1.6 milliseconds! Divide it by 1.6 to convert to milliseconds!**
 
 These are the kinds of messages:
@@ -103,7 +103,7 @@ That would be an ACK for a message that looks like this:
 fe zz XX XX XX XX XX zz zz zz zz zz zz ...
 ```
 
-*Not all* types of cube->app messages need to be ACKed all the time - see the "Needs ACK?" section in the respective command's descriptions.
+*Not all* types of cube->app messages need to be ACKed all the time - see the "Needs ACK?" section in the respective message's descriptions.
 
 ## Cube Hello
 |Command|Direction|Needs ACK?|
@@ -192,7 +192,7 @@ Looking at the cube with white on top and green in front, this is how numbers co
 |-|-|
 |*Sync State*|app->cube|
 
-If the physical state of the cube becomes out of sync with what the cube thinks it is, you can send the *Sync State* command to tell the cube to reset its remembered state to the one you provide in the command. When the cube recieves a *Sync State* command it will reply with a [*Sync Confirmation*](#sync-confirmation) command.
+If the physical state of the cube becomes out of sync with what the cube thinks it is, you can send the *Sync State* command to tell the cube to reset its remembered state to the one you provide in the command. When the cube recieves a *Sync State* command it will reply with a [*Sync Confirmation*](#sync-confirmation) message.
 
 ```
 L = length (38)
@@ -251,10 +251,10 @@ You can send a *Request State* command to ask the cube for its current state. Th
 
 ```
 L = length (9)
-M = message content (always 5, 5, 5, 5, 5)
+M = message content
 C = checksum
 
-   L       M           C
+   L         M         C
    /\ /------------\ /---\
 fe 09 05 05 05 05 05 XX XX
 ```
@@ -262,7 +262,7 @@ fe 09 05 05 05 05 05 XX XX
 |Bytes (start index, length)|Type|Description|
 |-|-|-|
 |1, 1|u8|Length (always 9 for *Request State*)|
-|2, 5|u8[5]|Message content (always `[5, 5, 5, 5, 5]`)|
+|2, 5|-|Message content (always `[5, 5, 5, 5, 5]`? Unclear, needs more research)|
 |7, 2|u16_le|Checksum|
 
 ## Current State
@@ -270,7 +270,7 @@ fe 09 05 05 05 05 05 XX XX
 |-|-|-|
 |*Current State*|cube->app|no|
 
-Sent in response to a [*Request State*](#request-state) command. The format of this packet is identical to [*Sync Confirmation*](#sync-confirmation) execpt for the opcode (0x5)
+Sent in response to a [*Request State*](#request-state) command. The format of this packet is identical to [*Sync Confirmation*](#sync-confirmation) except for the opcode (0x5).
 
 ```
 L = length (38)
