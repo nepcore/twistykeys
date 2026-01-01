@@ -28,7 +28,7 @@ fn key_for_turn(turn: messages::Turn) -> Key {
 }
 
 fn do_emit(e: &mut Enigo, ev: messages::Turn) -> io::Result<()> {
-    const with_shift = ev.is_inverse();
+    let with_shift = ev.is_inverse();
     if with_shift {
         e.key(Key::Shift, Direction::Press);
     }
