@@ -9,13 +9,15 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-linux:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
     - uses: actions/checkout@v4
-    - name: Setup
+    - name: System Setup
+      run: sudo apt install -y libdbus-1-dev pkg-config
+    - name: Rust Setup
       run: rustup target add x86_64-pc-windows-msvc
     - name: Build Linux
       run: cargo build --release
