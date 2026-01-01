@@ -75,7 +75,7 @@ pub struct CubeHello {
     pub state: CubeState,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Turn {
     Li,
     L,
@@ -109,23 +109,34 @@ impl Turn {
             _ => bail!(ParseError::BadTurn { turn: x }),
         })
     }
+    pub fn is_inverse(&self) -> bool {
+        match self {
+            Self::Li => true,
+            Self::Ri => true,
+            Self::Di => true,
+            Self::Ui => true,
+            Self::Fi => true,
+            Self::Bi => true,
+            _ => false
+        }
+    }
 }
 
 impl fmt::Display for Turn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Li => write!(f, "L'"),
-            Self::L => write!(f, "L"),
+            Self::L => write!(f, "L "),
             Self::Ri => write!(f, "R'"),
-            Self::R => write!(f, "R"),
+            Self::R => write!(f, "R "),
             Self::Di => write!(f, "D'"),
-            Self::D => write!(f, "D"),
+            Self::D => write!(f, "D "),
             Self::Ui => write!(f, "U'"),
-            Self::U => write!(f, "U"),
+            Self::U => write!(f, "U "),
             Self::Fi => write!(f, "F'"),
-            Self::F => write!(f, "F"),
+            Self::F => write!(f, "F "),
             Self::Bi => write!(f, "B'"),
-            Self::B => write!(f, "B"),
+            Self::B => write!(f, "B "),
         }
     }
 }

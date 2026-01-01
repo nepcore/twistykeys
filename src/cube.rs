@@ -1,6 +1,7 @@
 use crate::crc::crc16;
-use crate::cubestate;
+//use crate::cubestate;
 use crate::messages::{self, C2aBody};
+use crate::input;
 use aes::{
     cipher::{BlockDecrypt, BlockEncrypt, KeyInit},
     Aes128, Block,
@@ -77,6 +78,7 @@ pub async fn run_protocol(mut cube: Cube) {
 
     let mut notifs = cube.perip.notifications().await.unwrap();
     let mut last_ms = 0;
+
     while let Some(n) = notifs.next().await {
         assert!(n.uuid == cube.fff6.uuid);
         let mut bytes = n.value;
@@ -89,7 +91,7 @@ pub async fn run_protocol(mut cube: Cube) {
         let msg = messages::parse_c2a_message(&bytes).unwrap();
 
         if let C2aBody::StateChange(sc) = msg.body() {
-            cubestate::render_cube(&sc.state);
+            input::emit(sc.turn.clone());
             println!(
                 "Turn: {} | ts diff {}",
                 sc.turn,
@@ -104,6 +106,7 @@ pub async fn run_protocol(mut cube: Cube) {
     }
 
     println!("Disconnecting...");
+    input::destroy();
     cube.perip.disconnect().await.unwrap();
     println!("Disconnected.");
 }

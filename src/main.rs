@@ -2,6 +2,7 @@ mod crc;
 mod cube;
 mod cubestate;
 mod messages;
+mod input;
 
 use crate::cube::Cube;
 use btleplug::api::{bleuuid::uuid_from_u16, Central, CentralEvent, Manager as _, Peripheral as _};
@@ -27,34 +28,34 @@ async fn async_main() {
     loop {
         if let CentralEvent::DeviceDiscovered(id) = events.next().await.unwrap() {
             let peripheral = central.peripheral(&id).await.unwrap();
-            if peripheral
-                .properties()
-                .await
-                .unwrap()
-                .unwrap()
-                .local_name
-                .iter()
-                .any(|name| name.starts_with("QY-QYSC"))
-            {
+            let props = peripheral.properties().await.unwrap().unwrap();
+            println!("{} {:?} {:?}", props.address.to_string(), props.local_name, props.services);
+            if props.local_name.iter().any(|name| name.starts_with("QY-QYSC")) ||
+               props.address.to_string().starts_with("CC:A3:00:") {
                 cube_perip = peripheral;
                 break;
             }
         }
     }
 
-    let local_name = cube_perip
+    let props = cube_perip
         .properties()
         .await
         .unwrap()
-        .unwrap()
-        .local_name
         .unwrap();
 
-    print!(
-        "Found cube: {} ({}). Connect? [Y/n] ",
-        local_name.trim(),
-        cube_perip.address()
-    );
+    if props.local_name.is_some() {
+        print!(
+            "Found cube: {} ({}). Connect? [Y/n] ",
+            props.local_name.unwrap().trim(),
+            cube_perip.address()
+        );
+    } else {
+        print!(
+            "Likely found a cube: {}. Connect? [Y/n] ",
+            cube_perip.address()
+        );
+    }
     io::stdout().flush().unwrap();
 
     let answer = io::stdin().lines().next().unwrap().unwrap();
@@ -82,6 +83,7 @@ async fn async_main() {
 }
 
 fn main() {
+    input::init();
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
