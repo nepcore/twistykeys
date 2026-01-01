@@ -44,6 +44,7 @@ jobs:
       if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
       uses: ncipollo/release-action@v1
       with:
+        allowUpdates: true
         artifactErrorsFailBuild: true
         draft: true
         omitBody: true
