@@ -27,7 +27,6 @@ jobs:
         draft: true
         omitBody: true
         omitBodyDuringUpdate: true
-        omitName: true
         omitNameDuringUpdate: true
         omitPrereleaseDuringUpdate: true
         removeArtifacts: false
@@ -49,7 +48,6 @@ jobs:
         draft: true
         omitBody: true
         omitBodyDuringUpdate: true
-        omitName: true
         omitNameDuringUpdate: true
         omitPrereleaseDuringUpdate: true
         removeArtifacts: false
