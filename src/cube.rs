@@ -6,9 +6,11 @@ use aes::{
     cipher::{BlockDecrypt, BlockEncrypt, KeyInit},
     Aes128, Block,
 };
-use btleplug::api::{Characteristic, Peripheral as _, WriteType};
+use btleplug::api::{Characteristic, Peripheral as _, WriteType, ValueNotification};
 use btleplug::platform::Peripheral;
 use futures_util::StreamExt;
+use std::time::Duration;
+use tokio::time::timeout;
 
 pub struct Cube {
     perip: Peripheral,
@@ -69,44 +71,48 @@ impl Cube {
     }
 }
 
+async fn process_notification(cube: &mut Cube, notif: ValueNotification) {
+    assert!(notif.uuid == cube.fff6.uuid);
+    let mut bytes = notif.value;
+    assert!(bytes.len() % 16 == 0);
+
+    for mut block in bytes.chunks_mut(16).map(Block::from_mut_slice) {
+        cube.cipher.decrypt_block(&mut block);
+    }
+
+    let msg = messages::parse_c2a_message(&bytes).unwrap();
+
+    if let C2aBody::StateChange(sc) = msg.body() {
+        let _ = input::emit(sc.turn.clone());
+        println!("Turn: {}", sc.turn);
+    }
+
+    if let Some(pkt) = msg.make_ack() {
+        cube.write_cmd_inner_bytes(pkt).await;
+    }
+}
+
 pub async fn run_protocol(mut cube: Cube) {
     cube.perip.subscribe(&cube.fff6).await.unwrap();
 
     // send App Hello
-    cube.write_cmd_inner_bytes(&messages::make_app_hello(cube.perip.address()))
-        .await;
+    cube.write_cmd_inner_bytes(&messages::make_app_hello(cube.perip.address())).await;
 
     let mut notifs = cube.perip.notifications().await.unwrap();
     let mut last_ms = 0;
 
-    while let Some(n) = notifs.next().await {
-        assert!(n.uuid == cube.fff6.uuid);
-        let mut bytes = n.value;
-        assert!(bytes.len() % 16 == 0);
-
-        for mut block in bytes.chunks_mut(16).map(Block::from_mut_slice) {
-            cube.cipher.decrypt_block(&mut block);
-        }
-
-        let msg = messages::parse_c2a_message(&bytes).unwrap();
-
-        if let C2aBody::StateChange(sc) = msg.body() {
-            input::emit(sc.turn.clone());
-            println!(
-                "Turn: {} | ts diff {}",
-                sc.turn,
-                msg.timestamp() - last_ms
-            );
-            last_ms = msg.timestamp();
-        }
-
-        if let Some(pkt) = msg.make_ack() {
-            cube.write_cmd_inner_bytes(pkt).await;
+    loop {
+        match timeout(Duration::from_mins(9), notifs.next()).await {
+            Ok(Some(notif)) => process_notification(&mut cube, notif).await,
+            Ok(None) => break,
+            // cube disconnects after 10 minutes of inactivity
+            // so after 9 minutes of nothing send another app hello to keep it alive
+            Err(_) => cube.write_cmd_inner_bytes(&messages::make_app_hello(cube.perip.address())).await
         }
     }
 
     println!("Disconnecting...");
-    input::destroy();
+    let _ = input::destroy();
     cube.perip.disconnect().await.unwrap();
     println!("Disconnected.");
 }
